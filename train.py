@@ -13,8 +13,8 @@ from config import (
     BATCH_SIZE, LEARNING_RATE, WEIGHT_DECAY,
     SCHEDULER, EPOCHS, DEVICE,
     GRADIENT_ACCUM_STEPS, LABEL_SMOOTHING,
-    VALID_LOSS_THRESHOLD, PATIENCE,
-    CHECKPOINT_DIR
+    VALID_LOSS_THRESHOLD, EVAL_INTERVAL,
+    PATIENCE, CHECKPOINT_DIR
 )
 from tokenizer    import train_bpe_tokenizer, BPETokenizer
 from dataset      import get_dataloader
@@ -51,7 +51,7 @@ def train(train_path: str, valid_path: str):
         valid_ids = tok.encode(f.read())
 
     # 4) create dataloader
-    train_loader = get_dataloader(train_ids, shuffle=True)
+    train_loader = get_dataloader(train_ids, shuffle=True)  # uses BATCH_SIZE from config
 
     # 5) build model + optimizer + scheduler + loss
     model = LLM(VOCAB_SIZE, D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE).to(DEVICE)
