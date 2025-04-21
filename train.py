@@ -9,8 +9,14 @@ from tokenizer    import train_bpe_tokenizer, BPETokenizer
 from dataset      import get_dataloader
 from model        import LLM           # your existing model.py
 from evaluate     import evaluate      # your existing evaluate()
+from utils        import set_seed, ensure_dir
 
 def train(data_path):
+    # reproducibility & setup
+    set_seed(42)
+    ensure_dir(CHECKPOINT_DIR)
+    torch.backends.cudnn.benchmark = True
+
     # 1) prepare data
     train_path, valid_path = download_and_prepare_wikitext2()
     # 2) train tokenizer if not already there
@@ -69,18 +75,22 @@ def train(data_path):
                 if val_loss < best_val:
                     best_val = val_loss
                     patience = 0
-                    torch.save(model.state_dict(), f"{CHECKPOINT_DIR}/best.pt")
-                    tqdm.write("  🎉 New best checkpoint!")
+                    ckpt = os.path.join(CHECKPOINT_DIR, "best.pt")
+                    torch.save(model.state_dict(), ckpt)
+                    tqdm.write(f"  🎉 New best checkpoint saved to {ckpt}!")
                 else:
                     patience += 1
                     tqdm.write(f"  Patience {patience}/{PATIENCE}")
+
                 if val_loss < VALID_LOSS_THRESHOLD or patience >= PATIENCE:
                     return
 
         # end epoch
-        torch.save(model.state_dict(), f"{CHECKPOINT_DIR}/epoch{epoch}.pt")
+        epoch_ckpt = os.path.join(CHECKPOINT_DIR, f"epoch{epoch}.pt")
+        torch.save(model.state_dict(), epoch_ckpt)
         tqdm.write(f"Finished epoch {epoch} (best val {best_val:.4f})")
 
 if __name__ == "__main__":
-    os.makedirs(CHECKPOINT_DIR, exist_ok=True)
+    ensure_dir(CHECKPOINT_DIR)
     train("data/wikitext-2/train.txt")
+
