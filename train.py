@@ -76,7 +76,7 @@ def train(data_path):
                 if val_loss < best_val:
                     best_val = val_loss
                     patience = 0
-                    best_ckpt_path = os.path.join(CHECKPOINT_DIR, "best.pt")
+                    ckpt = os.path.join(CHECKPOINT_DIR, "best.pt")
                     save_checkpoint(model, optimizer, epoch, suffix="best")
                     tqdm.write(f"  🎉 New best checkpoint saved to {ckpt}!")
                 else:
