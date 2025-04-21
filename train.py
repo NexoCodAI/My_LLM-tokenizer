@@ -134,4 +134,4 @@ def train(data_path):
 
 if __name__ == "__main__":
     ensure_dir(CHECKPOINT_DIR)
-    train("data/wikitext-2/train.txt")
+    train()
