@@ -51,7 +51,7 @@ def train(train_path: str, valid_path: str):
         valid_ids = tok.encode(f.read())
 
     # 4) create dataloader
-    train_loader = get_dataloader(train_ids, batch_size=BATCH_SIZE, shuffle=True)
+    train_loader = get_dataloader(train_ids, shuffle=True)
 
     # 5) build model + optimizer + scheduler + loss
     model = LLM(VOCAB_SIZE, D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE).to(DEVICE)
