@@ -37,7 +37,7 @@ def train(train_path: str, valid_path: str):
 
     # 1) train tokenizer if not already there
     if not os.path.exists("tokenizer/vocab.json"):
-        train_bpe_tokenizer([train_path], vocab_size=30_000, save_dir="tokenizer")
+        train_bpe_tokenizer([train_path], vocab_size=3_000, save_dir="tokenizer")
 
     # 2) load tokenizer & update VOCAB_SIZE
     tok = BPETokenizer("tokenizer/vocab.json", "tokenizer/merges.txt")
