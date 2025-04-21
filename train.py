@@ -1,10 +1,11 @@
-# train.py
-
+#!/usr/bin/env python3
 import os
 import math
+import argparse
 import torch
 from tqdm import tqdm
 from torch.cuda.amp import autocast, GradScaler
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 # Project-specific imports
 from config import (
@@ -12,11 +13,9 @@ from config import (
     BATCH_SIZE, LEARNING_RATE, WEIGHT_DECAY,
     SCHEDULER, EPOCHS, DEVICE,
     GRADIENT_ACCUM_STEPS, LABEL_SMOOTHING,
-    VALIDATION_SPLIT, EVAL_INTERVAL,
     VALID_LOSS_THRESHOLD, PATIENCE,
     CHECKPOINT_DIR
 )
-from data_utils   import download_and_prepare_wikitext2
 from tokenizer    import train_bpe_tokenizer, BPETokenizer
 from dataset      import get_dataloader
 from model        import LLM
@@ -25,7 +24,7 @@ from utils        import set_seed, ensure_dir
 from checkpoint   import save_checkpoint
 
 
-def train(data_path):
+def train(train_path: str, valid_path: str):
     # reproducibility & setup
     set_seed(42)
     ensure_dir(CHECKPOINT_DIR)
@@ -34,32 +33,25 @@ def train(data_path):
     # initialize AMP scaler
     scaler = GradScaler()
 
-    # 1) prepare data
-    train_path, valid_path = download_and_prepare_wikitext2()
-
-    # 2) train tokenizer if not already there
+    # 1) train tokenizer if not already there
     if not os.path.exists("tokenizer/vocab.json"):
         train_bpe_tokenizer([train_path], vocab_size=30_000, save_dir="tokenizer")
 
-    # 3) load tokenizer & update VOCAB_SIZE
+    # 2) load tokenizer & update VOCAB_SIZE
     tok = BPETokenizer("tokenizer/vocab.json", "tokenizer/merges.txt")
     global VOCAB_SIZE
     VOCAB_SIZE = tok.vocab_size
 
-    # 4) read & tokenize whole file into IDs
+    # 3) read & tokenize whole file into IDs
     with open(train_path, "r", encoding="utf-8") as f:
         train_ids = tok.encode(f.read())
     with open(valid_path, "r", encoding="utf-8") as f:
         valid_ids = tok.encode(f.read())
 
-    # 5) narrow down validation for speed
-    split = int(len(valid_ids) * VALIDATION_SPLIT)
-    valid_ids = valid_ids[:split]
+    # 4) create dataloader
+    train_loader = get_dataloader(train_ids, batch_size=BATCH_SIZE, shuffle=True)
 
-    # 6) create loaders
-    train_loader = get_dataloader(train_ids, shuffle=True)
-
-    # 7) build model + optimizer + scheduler + loss
+    # 5) build model + optimizer + scheduler + loss
     model = LLM(VOCAB_SIZE, D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE).to(DEVICE)
     # — weight tying
     model.head.weight = model.token_emb.weight
@@ -69,15 +61,13 @@ def train(data_path):
         lr=LEARNING_RATE,
         weight_decay=WEIGHT_DECAY
     )
-    # compute total update steps
-    steps_per_epoch = math.ceil(len(train_loader) / GRADIENT_ACCUM_STEPS)
-    total_steps = steps_per_epoch * EPOCHS
-    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    scheduler = ReduceLROnPlateau(
         optimizer,
-        max_lr=SCHEDULER['max_lr'],
-        total_steps=total_steps,
-        pct_start=SCHEDULER['pct_start'],
-        anneal_strategy=SCHEDULER['anneal_strategy']
+        mode=SCHEDULER['mode'],
+        factor=SCHEDULER['factor'],
+        patience=SCHEDULER['patience'],
+        min_lr=SCHEDULER['min_lr'],
+        verbose=SCHEDULER['verbose']
     )
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
 
@@ -103,9 +93,8 @@ def train(data_path):
             # scale gradients, backward pass, and optimizer step
             scaler.scale(loss).backward()
             if step % GRADIENT_ACCUM_STEPS == 0:
-                scaler.step(optimizer)    # applies gradients
-                scaler.update()           # updates the scale for next iteration
-                scheduler.step()
+                scaler.step(optimizer)
+                scaler.update()
                 optimizer.zero_grad()
 
             pbar.set_postfix(loss=loss.item())
@@ -114,6 +103,9 @@ def train(data_path):
             if step % EVAL_INTERVAL == 0:
                 val_loss, val_ppl = evaluate(model, valid_ids, DEVICE)
                 tqdm.write(f"Step {step} → val loss {val_loss:.4f}, ppl {val_ppl:.2f}")
+
+                # scheduler step on validation loss
+                scheduler.step(val_loss)
 
                 if val_loss < best_val:
                     best_val = val_loss
@@ -132,6 +124,25 @@ def train(data_path):
         tqdm.write(f"Finished epoch {epoch} (best val {best_val:.4f})")
 
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(description="Train LLM on chat data")
+    parser.add_argument(
+        "--data_dir", type=str, required=True,
+        help="Directory containing train.txt and valid.txt"
+    )
+    args = parser.parse_args()
+
+    train_path = os.path.join(args.data_dir, "train.txt")
+    valid_path = os.path.join(args.data_dir, "valid.txt")
+
+    if not os.path.isfile(train_path) or not os.path.isfile(valid_path):
+        raise FileNotFoundError(
+            f"train.txt or valid.txt not found in {args.data_dir}"
+        )
+
     ensure_dir(CHECKPOINT_DIR)
-    train()
+    train(train_path, valid_path)
+
+
+if __name__ == "__main__":
+    main()
