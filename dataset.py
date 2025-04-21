@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
-from config import BLOCK_SIZE, BATCH_SIZ
+from config import BLOCK_SIZE, BATCH_SIZE
 
 class TextDataset(Dataset):
     def __init__(self, token_ids, block_size):
