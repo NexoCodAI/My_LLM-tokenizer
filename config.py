@@ -11,7 +11,7 @@ BLOCK_SIZE = 256      # context/window size (increased from 128)
 VALIDATION_SPLIT = 0.1  # fraction of tokens reserved for validation
 
 # Training hyperparameters
-BATCH_SIZE = 64       # reduced to fit larger model
+BATCH_SIZE = 256       # reduced to fit larger model
 LEARNING_RATE = 3e-4  # base learning rate
 WEIGHT_DECAY = 1e-2   # for optimizer regularization
 LABEL_SMOOTHING = 0.1 # for CrossEntropyLoss
