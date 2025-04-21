@@ -3,26 +3,40 @@ import os
 import re
 import ftfy
 import html
+import unicodedata
 
 def clean_line(line):
-    # fix mojibake / odd unicode
+    # 1) fix mojibake / odd unicode
     line = ftfy.fix_text(line)
-    # unescape HTML entities
+    # 2) unescape HTML entities
     line = html.unescape(line)
-    # remove citation brackets like [1], [12], [citation needed]
-    line = re.sub(r"\[.*?\]", "", line)
-    # remove any leftover non‑printable/control chars
-    line = re.sub(r"[\x00-\x1F\x7F]", " ", line)
-    # collapse multiple spaces
-    return re.sub(r"\s+", " ", line).strip()
+    # 3) normalize Unicode (NFC composes accents into single codepoints)
+    line = unicodedata.normalize('NFC', line)
+    # 4) remove HTML tags (e.g. <ref>…</ref>)
+    line = re.sub(r"<[^>]+>", " ", line)
+    # 5) remove citation brackets like [1], [12], [citation needed]
+    line = re.sub(r"\[.*?\]", " ", line)
+    # 6) drop any other control or unassigned Unicode chars
+    line = "".join(
+        ch for ch in line
+        if unicodedata.category(ch)[0] != "C"
+    )
+    # 7) optionally strip out non-printable glyphs (keeps letters, numbers, punctuation, whitespace)
+    #    (uncomment if you want strictly ASCII-only)
+    # import string
+    # line = "".join(ch for ch in line if ch in string.printable)
+    # 8) collapse multiple spaces into one
+    line = re.sub(r"\s+", " ", line)
+    return line.strip()
 
 def download_and_prepare_wikitext2(save_path="data/wikitext-2"):
     os.makedirs(save_path, exist_ok=True)
     ds = load_dataset("wikitext", "wikitext-2-raw-v1")
+
     def concat(split):
         lines = []
-        for l in ds[split]["text"]:
-            l = l.strip()
+        for raw in ds[split]["text"]:
+            l = raw.strip()
             # skip pure headings or empty
             if not l or l.startswith("="):
                 continue
@@ -38,4 +52,7 @@ def download_and_prepare_wikitext2(save_path="data/wikitext-2"):
         with open(os.path.join(save_path, name), "w", encoding="utf-8") as f:
             f.write(txt)
 
-    return os.path.join(save_path, "train.txt"), os.path.join(save_path, "valid.txt")
+    return (
+        os.path.join(save_path, "train.txt"),
+        os.path.join(save_path, "valid.txt"),
+    )
