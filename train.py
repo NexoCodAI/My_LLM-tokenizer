@@ -10,6 +10,7 @@ from dataset      import get_dataloader
 from model        import LLM           # your existing model.py
 from evaluate     import evaluate      # your existing evaluate()
 from utils        import set_seed, ensure_dir
+from checkpoint import save_checkpoint
 
 def train(data_path):
     # reproducibility & setup
@@ -75,8 +76,8 @@ def train(data_path):
                 if val_loss < best_val:
                     best_val = val_loss
                     patience = 0
-                    ckpt = os.path.join(CHECKPOINT_DIR, "best.pt")
-                    torch.save(model.state_dict(), ckpt)
+                    best_ckpt_path = os.path.join(CHECKPOINT_DIR, "best.pt")
+                    save_checkpoint(model, optimizer, epoch, suffix="best")
                     tqdm.write(f"  🎉 New best checkpoint saved to {ckpt}!")
                 else:
                     patience += 1
@@ -87,7 +88,7 @@ def train(data_path):
 
         # end epoch
         epoch_ckpt = os.path.join(CHECKPOINT_DIR, f"epoch{epoch}.pt")
-        torch.save(model.state_dict(), epoch_ckpt)
+        save_checkpoint(model, optimizer, epoch) 
         tqdm.write(f"Finished epoch {epoch} (best val {best_val:.4f})")
 
 if __name__ == "__main__":
