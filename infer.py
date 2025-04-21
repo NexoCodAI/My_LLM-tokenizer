@@ -1,5 +1,4 @@
 # infer.py
-# Updated inference script to use BPETokenizer and load the latest checkpoint
 
 import os
 import torch
@@ -7,7 +6,14 @@ from model        import LLM
 from tokenizer    import BPETokenizer
 from evaluate     import sample
 from checkpoint   import load_checkpoint
-from config       import CHECKPOINT_DIR, D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE, DEVICE
+from config       import (
+    CHECKPOINT_DIR,
+    D_MODEL,
+    N_LAYERS,
+    N_HEADS,
+    BLOCK_SIZE,
+    DEVICE
+)
 from utils        import set_seed, ensure_dir
 
 
@@ -39,13 +45,16 @@ def infer(
     latest_ckpt = os.path.join(CHECKPOINT_DIR, ckpt_files[0])
     print(f"Loading checkpoint: {latest_ckpt}")
 
-    # 3) build model and load weights
+    # 3) build model and tie weights
     model = LLM(vocab_size, D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE).to(DEVICE)
+    model.head.weight = model.token_emb.weight
+
+    # 4) load checkpoint (no optimizer here)
     start_epoch = load_checkpoint(latest_ckpt, model, optimizer=None)
     print(f"Resumed from epoch {start_epoch}")
     model.eval()
 
-    # 4) run sampling
+    # 5) run sampling
     print(f"\nPrompt: {prompt}")
     generated = sample(model, tokenizer, start_text=prompt, length=gen_length, device=DEVICE)
     print(f"\nGenerated text:\n{generated}\n")
@@ -54,3 +63,4 @@ def infer(
 if __name__ == "__main__":
     ensure_dir(CHECKPOINT_DIR)
     infer()
+
