@@ -3,7 +3,7 @@ from tokenizers import ByteLevelBPETokenizer
 
 def train_bpe_tokenizer(
     files,              # list of paths: [train.txt, ...]
-    vocab_size=30_000,
+    vocab_size=3_000,
     min_frequency=2,
     save_dir="tokenizer"
 ):
