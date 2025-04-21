@@ -2,10 +2,10 @@ import os
 from tokenizers import ByteLevelBPETokenizer
 
 def train_bpe_tokenizer(
-    files=["data/ultrachat-small/train.txt"],              # list of paths: [train.txt, ...]
-    vocab_size=3_000,
-    min_frequency=5,
-    save_dir="tokenizer"
+    files=["data/ultrachat-small/train.txt"],
+    vocab_size=3000,
+    min_frequency=2,
+    save_dir="tokenizer"   
 ):
     """
     Trains a Byte-Level BPE tokenizer on the provided files.
