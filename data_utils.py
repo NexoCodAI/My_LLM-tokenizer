@@ -16,7 +16,7 @@ def clean_line(line):
     # collapse multiple spaces
     return re.sub(r"\s+", " ", line).strip()
 
-def download_and_prepare_wikitext2_clean(save_path="data/wikitext-2"):
+def download_and_prepare_wikitext2(save_path="data/wikitext-2"):
     os.makedirs(save_path, exist_ok=True)
     ds = load_dataset("wikitext", "wikitext-2-raw-v1")
     def concat(split):
