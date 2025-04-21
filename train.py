@@ -105,7 +105,7 @@ def train(data_path):
             if step % GRADIENT_ACCUM_STEPS == 0:
                 scaler.step(optimizer)    # applies gradients
                 scaler.update()           # updates the scale for next iteration
-                scheduler.step()
+                scheduler.step(val_loss)
                 optimizer.zero_grad()
 
             pbar.set_postfix(loss=loss.item())
