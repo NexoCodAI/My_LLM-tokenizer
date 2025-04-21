@@ -23,7 +23,7 @@ VALIDATION_SPLIT  = 0.1                      # fraction of data for validation
 BATCH_SIZE      = 210
 LEARNING_RATE   = 1e-4
 WEIGHT_DECAY    = 1e-2
-LABEL_SMOOTHING = 0.1
+LABEL_SMOOTHING = 0.0
 
 # -----------------------------------------------------------------------------
 # Scheduler → plateau‑aware
