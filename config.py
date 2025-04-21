@@ -5,7 +5,7 @@ VOCAB_SIZE = None     # to be set after tokenizer initialization
 D_MODEL = 384         # embedding dimension (increased from 256)
 N_LAYERS = 6          # number of transformer blocks (increased from 3)
 N_HEADS = 4           # attention heads per block
-BLOCK_SIZE = 256      # context/window size (increased from 128)
+BLOCK_SIZE = 128      # context/window size (increased from 128)
 
 # Data split for validation
 VALIDATION_SPLIT = 0.1  # fraction of tokens reserved for validation
@@ -27,7 +27,7 @@ SCHEDULER = {
 # Training loop control
 EPOCHS = 2            # total epochs (increased from 1)
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-GRADIENT_ACCUM_STEPS = 4  # accumulate gradients for larger effective batch size
+GRADIENT_ACCUM_STEPS = 8  # accumulate gradients for larger effective batch size
 
 # Early-stopping & evaluation
 EVAL_INTERVAL = 1000        # run validation every N batches
