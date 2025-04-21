@@ -33,9 +33,14 @@ def write_split(split_dataset, save_path: str, filename: str):
     os.makedirs(save_path, exist_ok=True)
     lines = []
     for item in split_dataset:
-        prompt = clean_text(item.get("instruction", ""))
-        response = clean_text(item.get("output", ""))
-        lines.append(f"User: {prompt}\nAssistant: {response}\n")
+        # 'data' field is a list of alternating user/assistant turns
+        convo = item.get("data", [])
+        # pair up user (even idx) with assistant (odd idx)
+        for i in range(0, len(convo), 2):
+            user_turn = clean_text(convo[i]) if convo[i] else ""
+            assistant_turn = clean_text(convo[i+1]) if i+1 < len(convo) and convo[i+1] else ""
+            lines.append(f"User: {user_turn}\nAssistant: {assistant_turn}\n")
+
     out_path = os.path.join(save_path, filename)
     with open(out_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
@@ -75,3 +80,4 @@ def prepare_chat_data(
 
 if __name__ == "__main__":
     prepare_chat_data()
+
