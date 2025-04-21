@@ -1,5 +1,6 @@
 import torch
 from torch.utils.data import Dataset, DataLoader
+from config import BLOCK_SIZE, BATCH_SIZ
 
 class TextDataset(Dataset):
     def __init__(self, token_ids, block_size):
@@ -16,6 +17,9 @@ class TextDataset(Dataset):
         y = torch.tensor(chunk[1:],  dtype=torch.long)
         return x, y
 
-def get_dataloader(tokens, block_size, batch_size, shuffle=True):
-    ds = TextDataset(tokens, block_size)
-    return DataLoader(ds, batch_size=batch_size, shuffle=shuffle)
+def get_dataloader(tokens, shuffle=True):
+    """
+    Automatically uses BLOCK_SIZE and BATCH_SIZE from config.py
+    """
+    ds = TextDataset(tokens, BLOCK_SIZE)
+    return DataLoader(ds, batch_size=BATCH_SIZE, shuffle=shuffle)
