@@ -4,7 +4,9 @@ import os
 import math
 import torch
 from tqdm import tqdm
+from torch.cuda.amp import autocast, GradScaler
 
+# Project-specific imports
 from config import (
     D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE,
     BATCH_SIZE, LEARNING_RATE, WEIGHT_DECAY,
@@ -29,6 +31,9 @@ def train(data_path):
     ensure_dir(CHECKPOINT_DIR)
     torch.backends.cudnn.benchmark = True
 
+    # initialize AMP scaler
+    scaler = GradScaler()
+
     # 1) prepare data
     train_path, valid_path = download_and_prepare_wikitext2()
 
@@ -36,7 +41,7 @@ def train(data_path):
     if not os.path.exists("tokenizer/vocab.json"):
         train_bpe_tokenizer([train_path], vocab_size=30_000, save_dir="tokenizer")
 
-    # 3) load tokenizer & update global VOCAB_SIZE
+    # 3) load tokenizer & update VOCAB_SIZE
     tok = BPETokenizer("tokenizer/vocab.json", "tokenizer/merges.txt")
     global VOCAB_SIZE
     VOCAB_SIZE = tok.vocab_size
@@ -87,20 +92,25 @@ def train(data_path):
             step += 1
             x, y = x.to(DEVICE), y.to(DEVICE)
 
-            logits = model(x)
-            loss = criterion(
-                logits.view(-1, VOCAB_SIZE),
-                y.view(-1)
-            )
+            # —— AMP half-precision forward + loss
+            with autocast():
+                logits = model(x)
+                loss = criterion(
+                    logits.view(-1, VOCAB_SIZE),
+                    y.view(-1)
+                )
 
-            loss.backward()
+            # scale gradients, backward pass, and optimizer step
+            scaler.scale(loss).backward()
             if step % GRADIENT_ACCUM_STEPS == 0:
-                optimizer.step()
+                scaler.step(optimizer)    # applies gradients
+                scaler.update()           # updates the scale for next iteration
                 scheduler.step()
                 optimizer.zero_grad()
 
             pbar.set_postfix(loss=loss.item())
 
+            # periodic evaluation + checkpointing
             if step % EVAL_INTERVAL == 0:
                 val_loss, val_ppl = evaluate(model, valid_ids, DEVICE)
                 tqdm.write(f"Step {step} → val loss {val_loss:.4f}, ppl {val_ppl:.2f}")
@@ -125,4 +135,3 @@ def train(data_path):
 if __name__ == "__main__":
     ensure_dir(CHECKPOINT_DIR)
     train("data/wikitext-2/train.txt")
-
