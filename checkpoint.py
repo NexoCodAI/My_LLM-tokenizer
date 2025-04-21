@@ -1,4 +1,7 @@
-import torch, os
+# checkpoint.py
+
+import torch
+import os
 from config import CHECKPOINT_DIR
 
 def save_checkpoint(model, optimizer, epoch, suffix=""):
@@ -14,20 +17,20 @@ def save_checkpoint(model, optimizer, epoch, suffix=""):
 
 def load_checkpoint(path, model, optimizer=None):
     """
-    Partially loads matching weights from `path` into `model`,
-    skipping any keys that don't exist or whose shapes differ.
+    Loads the checkpoint at `path` into `model`, optionally restoring optimizer state.
+    Skips any parameters whose names or shapes don’t match.
+    Returns the saved epoch (or None if not present).
     """
     ckpt = torch.load(path, map_location='cpu')
     pretrained = ckpt['model']
     model_dict = model.state_dict()
 
-    # keep only keys present in model AND same shape
+    # keep only matching keys
     filtered = {
         k: v for k, v in pretrained.items()
-        if (k in model_dict and v.shape == model_dict[k].shape)
+        if k in model_dict and v.shape == model_dict[k].shape
     }
 
-    # diagnostics
     total, kept = len(pretrained), len(filtered)
     print(f"→ loading {kept}/{total} tensors")
     if kept < total:
@@ -36,11 +39,10 @@ def load_checkpoint(path, model, optimizer=None):
         for k in skipped:
             print("    ", k)
 
-    # update & load
     model_dict.update(filtered)
     model.load_state_dict(model_dict)
 
-    # optionally restore optimizer
+    # restore optimizer if provided
     if optimizer is not None and 'optimizer' in ckpt:
         optimizer.load_state_dict(ckpt['optimizer'])
 
