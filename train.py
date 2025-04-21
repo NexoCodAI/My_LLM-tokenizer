@@ -22,6 +22,8 @@ from model        import LLM
 from evaluate     import evaluate
 from utils        import set_seed, ensure_dir
 from checkpoint   import save_checkpoint
+# Import data preparation
+from data_utils   import prepare_chat_data
 
 
 def train(train_path: str, valid_path: str):
@@ -132,13 +134,13 @@ def main():
     )
     args = parser.parse_args()
 
+    # Ensure data is prepared
+    if not os.path.isfile(os.path.join(args.data_dir, "train.txt")) or not os.path.isfile(os.path.join(args.data_dir, "valid.txt")):
+        print(f"train.txt or valid.txt not found in {args.data_dir}. Preparing data...")
+        prepare_chat_data(save_path=args.data_dir)
+
     train_path = os.path.join(args.data_dir, "train.txt")
     valid_path = os.path.join(args.data_dir, "valid.txt")
-
-    if not os.path.isfile(train_path) or not os.path.isfile(valid_path):
-        raise FileNotFoundError(
-            f"train.txt or valid.txt not found in {args.data_dir}"
-        )
 
     ensure_dir(CHECKPOINT_DIR)
     train(train_path, valid_path)
