@@ -26,7 +26,7 @@ SCHEDULER = {
 
 # Training loop control
 EPOCHS = 5            # total epochs (increased from 1)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 GRADIENT_ACCUM_STEPS = 4  # accumulate gradients for larger effective batch size
 
 # Early-stopping & evaluation
