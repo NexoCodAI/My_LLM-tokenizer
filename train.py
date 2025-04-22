@@ -22,7 +22,6 @@ from model        import LLM
 from evaluate     import evaluate
 from utils        import set_seed, ensure_dir
 from checkpoint   import save_checkpoint
-# Import data preparation
 from data_utils   import prepare_chat_data
 
 
@@ -32,30 +31,28 @@ def train(train_path: str, valid_path: str):
     ensure_dir(CHECKPOINT_DIR)
     torch.backends.cudnn.benchmark = True
 
-    # initialize AMP scaler
     scaler = GradScaler()
 
     # 1) train tokenizer if not already there
     if not os.path.exists("tokenizer/vocab.json"):
         train_bpe_tokenizer([train_path], vocab_size=3_000, save_dir="tokenizer")
 
-    # 2) load tokenizer & update VOCAB_SIZE
+    # 2) load tokenizer
     tok = BPETokenizer("tokenizer/vocab.json", "tokenizer/merges.txt")
     global VOCAB_SIZE
     VOCAB_SIZE = tok.vocab_size
 
-    # 3) read & tokenize whole file into IDs
+    # 3) read & tokenize
     with open(train_path, "r", encoding="utf-8") as f:
         train_ids = tok.encode(f.read())
     with open(valid_path, "r", encoding="utf-8") as f:
         valid_ids = tok.encode(f.read())
 
-    # 4) create dataloader
-    train_loader = get_dataloader(train_ids, shuffle=True)  # uses BATCH_SIZE from config
+    # 4) dataloader
+    train_loader = get_dataloader(train_ids, shuffle=True)
 
-    # 5) build model + optimizer + scheduler + loss
+    # 5) model, optimizer, scheduler, loss
     model = LLM(VOCAB_SIZE, D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE).to(DEVICE)
-    # — weight tying
     model.head.weight = model.token_emb.weight
 
     optimizer = torch.optim.AdamW(
@@ -63,7 +60,13 @@ def train(train_path: str, valid_path: str):
         lr=LEARNING_RATE,
         weight_decay=WEIGHT_DECAY
     )
-    scheduler = ReduceLROnPlateau(
+
+    # — add WARMUP
+    total_steps = len(train_loader) * EPOCHS // GRADIENT_ACCUM_STEPS
+    warmup_steps = int(0.05 * total_steps)  # 5% warmup
+    current_lr = 0.0  # start from zero
+
+    plateau_scheduler = ReduceLROnPlateau(
         optimizer,
         mode=SCHEDULER['mode'],
         factor=SCHEDULER['factor'],
@@ -71,6 +74,7 @@ def train(train_path: str, valid_path: str):
         min_lr=SCHEDULER['min_lr'],
         verbose=SCHEDULER['verbose']
     )
+
     criterion = torch.nn.CrossEntropyLoss(label_smoothing=LABEL_SMOOTHING)
 
     best_val = float('inf')
@@ -84,7 +88,12 @@ def train(train_path: str, valid_path: str):
             step += 1
             x, y = x.to(DEVICE), y.to(DEVICE)
 
-            # —— AMP half-precision forward + loss
+            # Warmup: Linear increase learning rate
+            if step <= warmup_steps:
+                warmup_lr = LEARNING_RATE * step / warmup_steps
+                for param_group in optimizer.param_groups:
+                    param_group['lr'] = warmup_lr
+
             with autocast():
                 logits = model(x)
                 loss = criterion(
@@ -92,7 +101,6 @@ def train(train_path: str, valid_path: str):
                     y.view(-1)
                 )
 
-            # scale gradients, backward pass, and optimizer step
             scaler.scale(loss).backward()
             if step % GRADIENT_ACCUM_STEPS == 0:
                 scaler.step(optimizer)
@@ -101,13 +109,12 @@ def train(train_path: str, valid_path: str):
 
             pbar.set_postfix(loss=loss.item())
 
-            # periodic evaluation + checkpointing
             if step % EVAL_INTERVAL == 0:
                 val_loss, val_ppl = evaluate(model, valid_ids, DEVICE)
                 tqdm.write(f"Step {step} → val loss {val_loss:.4f}, ppl {val_ppl:.2f}")
 
-                # scheduler step on validation loss
-                scheduler.step(val_loss)
+                if step > warmup_steps:
+                    plateau_scheduler.step(val_loss)  # only use plateau scheduler after warmup
 
                 if val_loss < best_val:
                     best_val = val_loss
@@ -121,7 +128,6 @@ def train(train_path: str, valid_path: str):
                 if val_loss < VALID_LOSS_THRESHOLD or patience >= PATIENCE:
                     return
 
-        # end of epoch checkpoint
         save_checkpoint(model, optimizer, epoch)
         tqdm.write(f"Finished epoch {epoch} (best val {best_val:.4f})")
 
@@ -134,7 +140,6 @@ def main():
     )
     args = parser.parse_args()
 
-    # Ensure data is prepared
     if not os.path.isfile(os.path.join(args.data_dir, "train.txt")) or not os.path.isfile(os.path.join(args.data_dir, "valid.txt")):
         print(f"train.txt or valid.txt not found in {args.data_dir}. Preparing data...")
         prepare_chat_data(save_path=args.data_dir)
