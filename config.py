@@ -50,6 +50,7 @@ GRADIENT_ACCUM_STEPS = 8
 EVAL_INTERVAL        = 1000
 VALID_LOSS_THRESHOLD = 1.0
 PATIENCE             = 6
+DROPOUT = 0.1
 
 # -----------------------------------------------------------------------------
 # Checkpointing
