@@ -59,6 +59,7 @@ class LLM(nn.Module):
         super().__init__()
         self.token_emb = nn.Embedding(vocab_size, d_model)
         self.pos_emb = nn.Parameter(torch.zeros(1, block_size, d_model))
+        self.drop = nn.Dropout(0.1)  # 🔥 Dropout after embedding sum
         self.blocks = nn.Sequential(*[
             TransformerBlock(d_model, n_heads) for _ in range(n_layers)
         ])
@@ -66,13 +67,15 @@ class LLM(nn.Module):
         self.head = nn.Linear(d_model, vocab_size)
         self.block_size = block_size
 
-    def forward(self, idx):  # idx: (B, T)
+    def forward(self, idx):
         B, T = idx.size()
         assert T <= self.block_size, "Sequence length exceeds model block size"
-        tok_emb = self.token_emb(idx)  # (B, T, C)
+        tok_emb = self.token_emb(idx)
         pos_emb = self.pos_emb[:, :T, :]
         x = tok_emb + pos_emb
+        x = self.drop(x)  # 🔥 drop after embeddings
         x = self.blocks(x)
         x = self.ln_f(x)
-        logits = self.head(x)  # (B, T, vocab_size)
+        x = self.drop(x)  # 🔥 optional: drop again before head
+        logits = self.head(x)
         return logits
