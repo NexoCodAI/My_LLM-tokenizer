@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from config import DROPOUT
 
 class CausalSelfAttention(nn.Module):
     def __init__(self, d_model, n_heads):
@@ -59,11 +60,12 @@ class LLM(nn.Module):
         super().__init__()
         self.token_emb = nn.Embedding(vocab_size, d_model)
         self.pos_emb = nn.Parameter(torch.zeros(1, block_size, d_model))
-        self.drop = nn.Dropout(0.1)  # 🔥 Dropout after embedding sum
+        self.drop_emb = nn.Dropout(0.1)  # 🔥 dropout after embedding sum
         self.blocks = nn.Sequential(*[
             TransformerBlock(d_model, n_heads) for _ in range(n_layers)
         ])
         self.ln_f = nn.LayerNorm(d_model)
+        self.drop_ln = nn.Dropout(0.1)  # 🔥 dropout after final layernorm
         self.head = nn.Linear(d_model, vocab_size)
         self.block_size = block_size
 
@@ -73,9 +75,10 @@ class LLM(nn.Module):
         tok_emb = self.token_emb(idx)
         pos_emb = self.pos_emb[:, :T, :]
         x = tok_emb + pos_emb
-        x = self.drop(x)  # 🔥 drop after embeddings
+        self.drop_emb = nn.Dropout(DROPOUT)  # 🔥 Dropout after embeddings
         x = self.blocks(x)
         x = self.ln_f(x)
-        x = self.drop(x)  # 🔥 optional: drop again before head
+        self.drop_ln = nn.Dropout(DROPOUT)   # 🔥 Dropout after layernorm
         logits = self.head(x)
+        return logits
         return logits
