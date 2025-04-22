@@ -5,7 +5,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 # Model configuration
 # -----------------------------------------------------------------------------
 VOCAB_SIZE = None           # to be set by tokenizer
-D_MODEL    = 384
+D_MODEL    = 512
 N_LAYERS   = 6
 N_HEADS    = 4
 BLOCK_SIZE = 128
@@ -14,7 +14,7 @@ BLOCK_SIZE = 128
 # Data configuration
 # -----------------------------------------------------------------------------
 SAVE_PATH         = "data/ultrachat-small"  # where train/valid txt live
-MAX_SAMPLES       = 800                     # e.g., 50000 or None for full
+MAX_SAMPLES       = 1000                     # e.g., 50000 or None for full
 VALIDATION_SPLIT  = 0.1                      # fraction of data for validation
 
 # -----------------------------------------------------------------------------
