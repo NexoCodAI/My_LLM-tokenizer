@@ -14,7 +14,7 @@ BLOCK_SIZE = 256
 # Data configuration
 # -----------------------------------------------------------------------------
 SAVE_PATH         = "data/ultrachat-small"  # where train/valid txt live
-MAX_SAMPLES       = 1000                     # e.g., 50000 or None for full
+MAX_SAMPLES       = 2000                     # e.g., 50000 or None for full
 VALIDATION_SPLIT  = 0.1                      # fraction of data for validation
 
 # -----------------------------------------------------------------------------
