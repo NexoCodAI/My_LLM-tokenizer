@@ -20,7 +20,7 @@ VALIDATION_SPLIT  = 0.1                      # fraction of data for validation
 # -----------------------------------------------------------------------------
 # Hyperparameters
 # -----------------------------------------------------------------------------
-BATCH_SIZE      = 370
+BATCH_SIZE      = 512
 LEARNING_RATE   = 1e-4
 WEIGHT_DECAY    = 1e-2
 LABEL_SMOOTHING = 0.0
