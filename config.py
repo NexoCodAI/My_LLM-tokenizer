@@ -6,8 +6,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 # -----------------------------------------------------------------------------
 VOCAB_SIZE = None           # to be set by tokenizer
 D_MODEL    = 512
-N_LAYERS   = 8
-N_HEADS    = 6
+N_LAYERS   = 6
+N_HEADS    = 8
 BLOCK_SIZE = 256
 
 # -----------------------------------------------------------------------------
