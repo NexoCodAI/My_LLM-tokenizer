@@ -8,7 +8,7 @@ VOCAB_SIZE = None           # to be set by tokenizer
 D_MODEL    = 512
 N_LAYERS   = 6
 N_HEADS    = 8
-BLOCK_SIZE = 256
+BLOCK_SIZE = 128
 
 # -----------------------------------------------------------------------------
 # Data configuration
