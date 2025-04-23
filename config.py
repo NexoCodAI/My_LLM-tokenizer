@@ -6,9 +6,9 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 # -----------------------------------------------------------------------------
 VOCAB_SIZE = None           # to be set by tokenizer
 D_MODEL    = 512
-N_LAYERS   = 6
-N_HEADS    = 4
-BLOCK_SIZE = 128
+N_LAYERS   = 8
+N_HEADS    = 6
+BLOCK_SIZE = 256
 
 # -----------------------------------------------------------------------------
 # Data configuration
@@ -20,7 +20,7 @@ VALIDATION_SPLIT  = 0.1                      # fraction of data for validation
 # -----------------------------------------------------------------------------
 # Hyperparameters
 # -----------------------------------------------------------------------------
-BATCH_SIZE      = 210
+BATCH_SIZE      = 220
 LEARNING_RATE   = 1e-4
 WEIGHT_DECAY    = 1e-2
 LABEL_SMOOTHING = 0.0
