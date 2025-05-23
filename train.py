@@ -64,7 +64,6 @@ def train(train_path: str, valid_path: str):
     # — add WARMUP
     total_steps = len(train_loader) * EPOCHS // GRADIENT_ACCUM_STEPS
     warmup_steps = int(0.05 * total_steps)  # 5% warmup
-    current_lr = 0.0  # start from zero
 
     plateau_scheduler = ReduceLROnPlateau(
         optimizer,

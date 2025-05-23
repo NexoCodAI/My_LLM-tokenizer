@@ -19,7 +19,6 @@ from utils        import set_seed, ensure_dir
 
 def infer(
     vocab_dir: str = "tokenizer",
-    combined_txt: str = "data/combined.txt",
     prompt: str = "The capital of France is",
     gen_length: int = 100
 ):

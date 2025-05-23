@@ -11,7 +11,7 @@ class CausalSelfAttention(nn.Module):
         self.query = nn.Linear(d_model, d_model)
         self.key = nn.Linear(d_model, d_model)
         self.value = nn.Linear(d_model, d_model)
-        self.dropout = nn.Dropout(0.1)
+        self.dropout = nn.Dropout(DROPOUT)  # Use DROPOUT from config
         self.proj = nn.Linear(d_model, d_model)
         # Causal mask will be applied in forward
 
@@ -37,7 +37,7 @@ class FeedForward(nn.Module):
             nn.Linear(d_model, 4*d_model),
             nn.GELU(),
             nn.Linear(4*d_model, d_model),
-            nn.Dropout(0.1)
+            nn.Dropout(DROPOUT)  # Use DROPOUT from config
         )
     def forward(self, x):
         return self.net(x)
@@ -60,12 +60,12 @@ class LLM(nn.Module):
         super().__init__()
         self.token_emb = nn.Embedding(vocab_size, d_model)
         self.pos_emb = nn.Parameter(torch.zeros(1, block_size, d_model))
-        self.drop_emb = nn.Dropout(0.1)  # 🔥 dropout after embedding sum
+        self.drop_emb = nn.Dropout(DROPOUT)  # Use DROPOUT from config
         self.blocks = nn.Sequential(*[
             TransformerBlock(d_model, n_heads) for _ in range(n_layers)
         ])
         self.ln_f = nn.LayerNorm(d_model)
-        self.drop_ln = nn.Dropout(0.1)  # 🔥 dropout after final layernorm
+        self.drop_ln = nn.Dropout(DROPOUT)   # Use DROPOUT from config
         self.head = nn.Linear(d_model, vocab_size)
         self.block_size = block_size
 
@@ -75,10 +75,9 @@ class LLM(nn.Module):
         tok_emb = self.token_emb(idx)
         pos_emb = self.pos_emb[:, :T, :]
         x = tok_emb + pos_emb
-        self.drop_emb = nn.Dropout(DROPOUT)  # 🔥 Dropout after embeddings
+        x = self.drop_emb(x)  # Apply dropout layer
         x = self.blocks(x)
         x = self.ln_f(x)
-        self.drop_ln = nn.Dropout(DROPOUT)   # 🔥 Dropout after layernorm
+        x = self.drop_ln(x)   # Apply dropout layer
         logits = self.head(x)
-        return logits
         return logits

@@ -57,8 +57,9 @@ def evaluate(model, val_tokens, device):
 if __name__ == "__main__":
     import argparse
     import torch
+    import os # Added for path joining
     from model     import LLM
-    from tokenizer import SimpleTokenizer
+    from tokenizer import BPETokenizer # Changed from SimpleTokenizer
     from config    import D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE, DEVICE
 
     parser = argparse.ArgumentParser()
@@ -79,19 +80,37 @@ if __name__ == "__main__":
 
     # load checkpoint
     ckpt = torch.load(args.ckpt, map_location=device)
-    text = open(args.data, 'r', encoding='utf-8').read()
-    tok = SimpleTokenizer([text])
+
+    # Load BPETokenizer (assuming standard paths)
+    # It's generally better to pass these as args, but for now, assume fixed paths.
+    vocab_path = "tokenizer/vocab.json"
+    merges_path = "tokenizer/merges.txt"
+    if not (os.path.exists(vocab_path) and os.path.exists(merges_path)):
+        raise FileNotFoundError(
+            f"Tokenizer files not found. Expected at {vocab_path} and {merges_path}. "
+            "Please train the tokenizer first using train.py or provide paths."
+        )
+    tok = BPETokenizer(vocab_path, merges_path)
     vocab_size = tok.vocab_size
 
+    # Read data for validation if in validate mode
+    text = None
+    if args.mode == 'validate':
+        if not args.data:
+            parser.error("argument --data is required for mode 'validate'")
+        text = open(args.data, 'r', encoding='utf-8').read()
+
     model = LLM(vocab_size, D_MODEL, N_LAYERS, N_HEADS, BLOCK_SIZE).to(device)
-    model.load_state_dict(ckpt['model_state_dict'])
+    model.load_state_dict(ckpt['model']) # Corrected key from 'model_state_dict' to 'model'
     # ensure weight‑tying during eval/run
     model.head.weight = model.token_emb.weight
 
     if args.mode == 'sample':
+        if not args.prompt:
+            parser.error("argument --prompt is required for mode 'sample'")
         print(sample(model, tok, args.prompt, args.length, device))
-    else:
-        tokens = tok.encode(text)
+    elif args.mode == 'validate': # Ensure text is not None
+        tokens = tok.encode(text) # text is guaranteed to be non-None here due to earlier check
         split_idx = int((1 - args.split) * len(tokens))
         val_tokens = tokens[split_idx:]
         val_loss, val_ppl = evaluate(model, val_tokens, device)

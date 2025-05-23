@@ -12,9 +12,10 @@ class TextDataset(Dataset):
         return len(self.tokens) - self.block_size
 
     def __getitem__(self, idx):
-        chunk = self.tokens[idx : idx + self.block_size]
-        x = torch.tensor(chunk[:-1], dtype=torch.long)
-        y = torch.tensor(chunk[1:],  dtype=torch.long)
+        # Select block_size + 1 tokens to create x and y of length block_size
+        chunk_data = self.tokens[idx : idx + self.block_size + 1]
+        x = torch.tensor(chunk_data[:-1], dtype=torch.long)
+        y = torch.tensor(chunk_data[1:],  dtype=torch.long)
         return x, y
 
 def get_dataloader(tokens, shuffle=True):

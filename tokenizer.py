@@ -23,7 +23,6 @@ def train_bpe_tokenizer(
     )
     tokenizer.save_model(save_dir)
     print(f"✓ Tokenizer trained and saved to {save_dir}/")
-from tokenizers import ByteLevelBPETokenizer
 from tokenizers.processors import BertProcessing
 
 class BPETokenizer:
